@@ -5,6 +5,7 @@ import math
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
 
 
 class market_envrionment(object):
@@ -40,12 +41,21 @@ class market_envrionment(object):
         '''
         No return data, store stock, market and TBN data into object
         '''
-        file_path = os.getcwd() + '/data/'
+        #file_path = os.getcwd() + '/data/'
+        file_path = '../data/'
+        file_type = '*.csv'
+        file_list = glob.glob(file_path + file_type)
         # load TBN data
-        '''
-        TO DO
-        load all years data into one data frame with two level index
-        '''
+        idx = pd.Index
+        tbn_combined = pd.DataFrame()
+        for file in file_list:
+            year = int(file.split('/')[-1][0:4])
+            tbn = pd.read_csv(file,  header = 0, index_col = [0], engine='c')
+            row_num = tbn.shape[0]
+            year_idx = idx(np.repeat(year, row_num))
+            tbn.set_index(year_idx, append = True, inplace = True)
+            tbn_combined = tbn_combined.append(tbn)
+        tbn_combined = tbn_combined.reorder_levels(order=[1,0])
         
 
         # load stock data
@@ -104,19 +114,23 @@ class market_envrionment(object):
         '''
 
     def log_return(self):
+        '''
+        TO DO
+
+        '''
     
 
     def sharpe_ratio(self):
-    '''
-    TO DO
+        '''
+        TO DO
 
-    '''
+        '''
 
     def moving_average(self):
-    '''
-    TO DO
+        '''
+        TO DO
 
-    '''
+        '''
 
     
 
