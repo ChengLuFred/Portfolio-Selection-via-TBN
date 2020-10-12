@@ -46,6 +46,7 @@ class market_envrionment(object):
         TO DO
         load all years data into one data frame with two level index
         '''
+        
 
         # load stock data
         file_name = 'stock_data.csv'
