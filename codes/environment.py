@@ -26,6 +26,7 @@ class market_envrionment(object):
         # get data
         self.load_data()
 
+
         # log
         self.states = []
         self.actions = []
@@ -39,15 +40,18 @@ class market_envrionment(object):
 
     def load_data(self):
         '''
-        No return data, store stock, market and TBN data into object
+        No return data, 
+        store stock, market and TBN data into object
+        modify self. 
         '''
         #file_path = os.getcwd() + '/data/'
         file_path = '../data/'
-        file_type = '*.csv'
+        file_type = 'TBN_*.csv'
         file_list = glob.glob(file_path + file_type)
+
         # load TBN data
         idx = pd.Index
-        tbn_combined = pd.DataFrame()
+        self.tbn_combined = pd.DataFrame()
         for file in file_list:
             year = int(file.split('/')[-1][0:4])
             tbn = pd.read_csv(file,  header = 0, index_col = [0], engine='c')
@@ -55,8 +59,7 @@ class market_envrionment(object):
             year_idx = idx(np.repeat(year, row_num))
             tbn.set_index(year_idx, append = True, inplace = True)
             tbn_combined = tbn_combined.append(tbn)
-        tbn_combined = tbn_combined.reorder_levels(order=[1,0])
-        
+        self.tbn_combined = tbn_combined.reorder_levels(order=[1,0])
 
         # load stock data
         file_name = 'stock_data.csv'
