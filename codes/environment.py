@@ -1,11 +1,16 @@
+# basic
 import pandas as pd
-#import pandas_datareader.data as web
 from datetime import datetime
-import math
-import os
 import numpy as np
-import matplotlib.pyplot as plt
+
+# operation system
+import os
 import glob
+# math
+from numpy.linalg import inv
+import math
+# plot
+import matplotlib.pyplot as plt
 
 
 class market_envrionment(object):
@@ -42,7 +47,12 @@ class market_envrionment(object):
         '''
         No return data, 
         store stock, market and TBN data into object
-        modify self. 
+        modify self.tbn_combined
+               self.stock_data
+               self.interest_rate
+               self.correlation_aggregate
+               self.volatility_aggregate
+               directly
         '''
         #file_path = os.getcwd() + '/data/'
         file_path = '../data/'
@@ -53,7 +63,7 @@ class market_envrionment(object):
         idx = pd.Index
         self.tbn_combined = pd.DataFrame()
         for file in file_list:
-            year = int(file.split('/')[-1][0:4])
+            year = int(file.split('/')[-1][4:8]) # not safe expression
             tbn = pd.read_csv(file,  header = 0, index_col = [0], engine='c')
             row_num = tbn.shape[0]
             year_idx = idx(np.repeat(year, row_num))
@@ -64,6 +74,20 @@ class market_envrionment(object):
         # load stock data
         file_name = 'stock_data.csv'
         self.stock_data = pd.read_csv(file_path + file_name,  header=0, index_col=[0], engine='c')
+        self.correlation_aggregate = self.stock_data.groupby(level=0).corr()
+        self.volatility_aggregate = self.stock_data.groupby(level=0).std()
+
+        # calculate stock return
+        # Na value
+        stock_data = stock_data.dropna(axis='columns') # drop incomplete data to form 26 columns
+
+        # set year as index 
+        date_format = '%Y-%m-%d' # Y for year, m for month, d for day
+        stock_date = pd.Index([datetime.strptime(x, date_format) for x in stock_data.index])
+        stock_data.index = [x.year for x in stock_date]
+
+        # calculate stock return
+        stock_data = stock_data.pct_change().dropna(axis='rows')
 
         # load market data
         file_name = 'F-F_Research_Data_Factors_daily.csv'
@@ -73,8 +97,9 @@ class market_envrionment(object):
         self.interest_rate.index = rf_date
 
     def get_state(self, action):
+        GMVP = self.get_GMVP(action)
         if self.date in self.dates_range:
-            state = self.portfolio_return()
+            state = self.portfolio_return(GMVP)
             return state
         else:
             exit()
@@ -91,6 +116,7 @@ class market_envrionment(object):
         return reward_current
     
     def step(self, action):
+        
         state = self.get_state(action)
         reward = self.get_reward()
         self.record_log()
@@ -104,11 +130,43 @@ class market_envrionment(object):
         df = pd.DataFrame(self.log, columns = columns_name)
         df.to_csv(file_name, index = False)
         print("Output data to", file_name)
+    
+    def get_GMVP(self, action):
+        '''
+        GMV portfolio as a function of intensity a
 
-    def portfolio_return(self):
+        return:
+            a column vector represting GMVP
+        '''
+        # initialization
+        a = action
+        period_index = self.date.year
+        R_1 = self.tbn_combined.loc[period_index].values
+        R_2 = self.correlation_aggregate.loc[period_index].values
+        volatility_vector = self.volatility_aggregate.loc[period_index]
+        D = np.diag(volatility_vector) # diagnoal matrix with volatility on diagnoal
+        one = np.ones(D.shape[0])
+
+        # pre calculation
+        R_3 = (1 - a) * R_1 + a * R_2 # new shrank correlated matrix
+        H = D @ R_3 @ D # new shrank covariance matrix
+        H_inv = inv(H)
+        numerator = H_inv @ one
+        denominator = one.T @ H_inv @ one
+
+        # GMV porfolio
+        x = numerator / denominator
+
+        #return pd.DataFrame(H)
+
+        return x.reshape((len(x), 1))
+
+    def portfolio_return(self, portfolio_weights):
         '''
         TO DO
         '''
+        w = portfolio_weights
+
 
     def excess_return(self):
         '''
