@@ -79,15 +79,15 @@ class market_envrionment(object):
 
         # calculate stock return
         # Na value
-        stock_data = stock_data.dropna(axis='columns') # drop incomplete data to form 26 columns
+        self.stock_data = self.stock_data.dropna(axis='columns') # drop incomplete data to form 26 columns
 
         # set year as index 
         date_format = '%Y-%m-%d' # Y for year, m for month, d for day
-        stock_date = pd.Index([datetime.strptime(x, date_format) for x in stock_data.index])
-        stock_data.index = [x.year for x in stock_date]
+        stock_date = pd.Index([datetime.strptime(x, date_format) for x in self.stock_data.index])
+        self.stock_data.index = [x.year for x in stock_date]
 
         # calculate stock return
-        stock_data = stock_data.pct_change().dropna(axis='rows')
+        self.stock_data = self.stock_data.pct_change().dropna(axis='rows')
 
         # load market data
         file_name = 'F-F_Research_Data_Factors_daily.csv'
