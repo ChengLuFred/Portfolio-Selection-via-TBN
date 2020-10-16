@@ -40,7 +40,7 @@ class market_envrionment(object):
 
         # calculation variable
         '''
-        TO DO
+        No need for now
         '''
 
     def load_data(self):
@@ -136,7 +136,7 @@ class market_envrionment(object):
         GMV portfolio as a function of intensity a
 
         return:
-            a column vector represting GMVP
+            a column vector represting GMVP (np.array)
         '''
         # initialization
         a = action
@@ -165,7 +165,16 @@ class market_envrionment(object):
         '''
         TO DO
         '''
+        # initialization
         w = portfolio_weights
+        period_index = self.date.year
+        stocks_returns = self.stock_data.loc[period_index + 1].values
+
+        # portfolio return
+        daily_return = stocks_returns @ w
+        cumulative_return = daily_return.cumprod()
+
+        return(cumulative_return)
 
 
     def excess_return(self):
