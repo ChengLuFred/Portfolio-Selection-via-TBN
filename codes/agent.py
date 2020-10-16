@@ -1,3 +1,5 @@
+from packages import *
+
 class PolicyGradient:
     """
     ReinforceAgent that follows algorithm
@@ -23,12 +25,9 @@ class PolicyGradient:
         self.states = []
         self.rewards = []
         self.actions = []
-        # all possible actions
-        ACTION_BUY = 1
-        ACTION_HOLD = 0
-        ACTION_SELL = -1
-        # order is important
-        self.ACTIONS = [ACTION_SELL, ACTION_HOLD, ACTION_BUY]
+
+        # action space
+        self.ACTIONS = np.arange(0, 1, step = 0.01)
 
 
     # get indices of active tiles for given state and action
@@ -39,7 +38,6 @@ class PolicyGradient:
                              self.num_of_tilings,
                             [self.position_scale * position],
                             [action])
-        #print("position is ", self.position_scale * position)
         return active_tiles # tiles index in each tilings
 
     # estimate the preference of given state and action
@@ -51,30 +49,8 @@ class PolicyGradient:
         """
         policy part: return the probability mass function(pmf) 
         """
-        # preference vector for three actions
-        h = []
-        for action in self.ACTIONS:
-            h.append(self.get_h(position, action))
-
-        # soft-max in action preference
-        t = np.exp(h - np.max(h))
-        pmf = t / np.sum(t)       
-
-        return pmf
 
     def choose_action(self, position, reward):
         """
         return the action according to the policy
         """
-        # recording the reward, state for update using
-        if reward is not None:
-            self.rewards.append(reward)
-        if position is not None:
-            self.states.append(position)
-
-        # choose the action accordingly
-        pmf = self.get_pi(position)
-        action = np.random.choice(3, p=pmf) - 1      
-        self.actions.append(action)
-
-        return action
