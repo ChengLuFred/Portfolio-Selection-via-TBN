@@ -18,7 +18,6 @@ class market_envrionment(object):
         # get data
         self.load_data()
 
-
         # log
         self.states = []
         self.actions = []
@@ -55,8 +54,8 @@ class market_envrionment(object):
             row_num = tbn.shape[0]
             year_idx = idx(np.repeat(year, row_num))
             tbn.set_index(year_idx, append = True, inplace = True)
-            tbn_combined = tbn_combined.append(tbn)
-        self.tbn_combined = tbn_combined.reorder_levels(order=[1,0])
+            self.tbn_combined = self.tbn_combined.append(tbn)
+        self.tbn_combined = self.tbn_combined.reorder_levels(order=[1,0])
 
         # load stock data
         file_name = 'stock_data.csv'
@@ -78,7 +77,7 @@ class market_envrionment(object):
 
         # load market data
         file_name = 'F-F_Research_Data_Factors_daily.csv'
-        self.interest_rate = pd.read_csv(file_name,  header=0, usecols=[0, 4], index_col=[0], engine='c').dropna()
+        self.interest_rate = pd.read_csv(file_path + file_name,  header=0, usecols=[0, 4], index_col=[0], engine='c').dropna()
         date_format = '%Y%m%d' # Y for year, m for month, d for day
         rf_date = pd.Index([datetime.strptime(str(x), date_format) for x in self.interest_rate.index])
         self.interest_rate.index = rf_date
@@ -145,7 +144,6 @@ class market_envrionment(object):
         x = numerator / denominator
 
         #return pd.DataFrame(H)
-
         return x.reshape((len(x), 1))
 
     def portfolio_return(self, portfolio_weights):
