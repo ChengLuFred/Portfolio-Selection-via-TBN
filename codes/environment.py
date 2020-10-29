@@ -31,14 +31,21 @@ class market_envrionment(object):
 
     def load_data(self):
         '''
-        No return data, 
-        store stock, market and TBN data into object
-        modify self.tbn_combined
-               self.stock_data
-               self.interest_rate
-               self.correlation_aggregate
-               self.volatility_aggregate
-               directly
+        Return:
+
+            None
+
+        Function:
+
+            load local file(stock, market and TBN) under data folder into object
+            
+            modify  self.tbn_combined
+                    self.stock_prices
+                    self.stock_returns
+                    self.interest_rate
+                    self.stock_correlation_aggregate
+                    self.stock_volatility_aggregate
+                    directly
         '''
         #file_path = os.getcwd() + '/data/'
         file_path = '../data/'
@@ -59,21 +66,20 @@ class market_envrionment(object):
 
         # load stock data
         file_name = 'stock_data.csv'
-        self.stock_data = pd.read_csv(file_path + file_name,  header=0, index_col=[0], engine='c')
-        self.correlation_aggregate = self.stock_data.groupby(level=0).corr()
-        self.volatility_aggregate = self.stock_data.groupby(level=0).std()
-
-        # calculate stock return
-        # Na value
-        self.stock_data = self.stock_data.dropna(axis='columns') # drop incomplete data to form 26 columns
+        self.stock_prices = pd.read_csv(file_path + file_name,  header=0, index_col=[0], engine='c')
+        self.stock_prices = self.stock_prices.dropna(axis='columns') # drop incomplete data to form 26 columns
 
         # set year as index 
         date_format = '%Y-%m-%d' # Y for year, m for month, d for day
-        stock_date = pd.Index([datetime.strptime(x, date_format) for x in self.stock_data.index])
-        self.stock_data.index = [x.year for x in stock_date]
+        stock_date = pd.Index([datetime.strptime(x, date_format) for x in self.stock_prices.index])
+        self.stock_prices.index = [x.year for x in stock_date]
 
         # calculate stock return
-        self.stock_data = self.stock_data.pct_change().dropna(axis='rows')
+        self.stock_returns = self.stock_prices.pct_change().dropna(axis='rows')
+
+        # get correlation of stock return
+        self.stock_correlation_aggregate = self.stock_returns.groupby(level=0).corr()
+        self.stock_volatility_aggregate = self.stock_returns.groupby(level=0).std()
 
         # load market data
         file_name = 'F-F_Research_Data_Factors_daily.csv'
@@ -126,10 +132,10 @@ class market_envrionment(object):
         '''
         # initialization
         a = action
-        period_index = self.date.year
+        period_index = self.date.year # be careful
         R_1 = self.tbn_combined.loc[period_index].values
-        R_2 = self.correlation_aggregate.loc[period_index].values
-        volatility_vector = self.volatility_aggregate.loc[period_index]
+        R_2 = self.stock_correlation_aggregate.loc[period_index].values
+        volatility_vector = self.stock_volatility_aggregate.loc[period_index]
         D = np.diag(volatility_vector) # diagnoal matrix with volatility on diagnoal
         one = np.ones(D.shape[0])
 
