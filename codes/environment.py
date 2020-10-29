@@ -89,8 +89,15 @@ class market_envrionment(object):
         self.interest_rate.index = rf_date
 
     def get_state(self, action):
-        GMVP = self.get_GMVP(action)
+        '''Take agent's action and get back env's next state
+        Args:
+            action: a number (shrinkage intensity)
+        Return:
+            state - according to state mapping
+        '''
+
         if self.date in self.dates_range:
+            GMVP = self.get_GMVP(action)
             state = self.portfolio_return(GMVP)
             return state
         else:
@@ -123,15 +130,15 @@ class market_envrionment(object):
         df.to_csv(file_name, index = False)
         print("Output data to", file_name)
     
-    def get_GMVP(self, action):
-        '''
-        GMV portfolio as a function of intensity a
-
-        return:
+    def get_GMVP(self, alpha):
+        '''GMV portfolio as a function of intensity a
+        Args:
+            alpha is the shrinkage intensity (a number) which is agent's action
+        Return:
             a column vector represting GMVP (np.array)
         '''
         # initialization
-        a = action
+        a = alpha
         period_index = self.date.year # be careful
         R_1 = self.tbn_combined.loc[period_index].values
         R_2 = self.stock_correlation_aggregate.loc[period_index].values
@@ -153,17 +160,21 @@ class market_envrionment(object):
         return x.reshape((len(x), 1))
 
     def portfolio_return(self, portfolio_weights):
-        '''
-        TO DO
+        '''calculate the portfolio return for next period
+        Args:
+            portfolio_weights (GMVP)
+
+        Return:
+            portfolio return (a number between 0 and 1)
         '''
         # initialization
         w = portfolio_weights
         period_index = self.date.year
-        stocks_returns = self.stock_data.loc[period_index + 1].values
+        stocks_returns = self.stock_returns.loc[period_index + 1].values
 
         # portfolio return
         daily_return = stocks_returns @ w
-        cumulative_return = daily_return.cumprod()
+        cumulative_return = (daily_return + 1).prod() - 1
 
         return(cumulative_return)
 
