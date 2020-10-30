@@ -1,4 +1,4 @@
-from packages import *
+from module.packages import *
 
 class PolicyGradient:
     """
