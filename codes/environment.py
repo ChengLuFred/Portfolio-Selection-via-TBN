@@ -30,14 +30,12 @@ class market_envrionment(object):
         '''
 
     def load_data(self):
-        '''
+        '''load local file(stock, market and TBN) under data folder into object
         Return:
 
             None
 
         Function:
-
-            load local file(stock, market and TBN) under data folder into object
             
             modify  self.tbn_combined
                     self.stock_prices
@@ -185,11 +183,16 @@ class market_envrionment(object):
 
         '''
 
+
     def log_return(self):
         '''
-        TO DO
+        Calculate 
 
         '''
+        R = np.log(self.stock_returns + 1)
+        return R
+
+
     
 
     def sharpe_ratio(self):
