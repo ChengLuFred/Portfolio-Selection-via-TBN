@@ -1,22 +1,43 @@
-from module.packages import *
+# from module.packages import *
+# basic
+import pandas as pd
+from datetime import datetime
+import numpy as np
+
+# operation system
+import os
+import glob
+from tqdm import tqdm
+
+# math
+from numpy.linalg import inv
+import math
+from math import floor
+
 
 class market_envrionment(object):
 
-    def __init__(self, symbols_list, start_date, end_date):
-
-        # initialization
-        self.symols_list = symbols_list
-        self.dates_range = pd.date_range(start_date, end_date)
-        self.start_date = start_date
-        self.end_date = end_date
-        self.date = start_date
-        self.date_index = 0        
-        self.init_wealth = 10000
-        self.reward_type = 'excess_return'
-        # self.cost_rate = 0.01
+    def __init__(self):
 
         # get data
         self.load_data()
+        
+        # initialization
+        #self.symols_list = symbols_list # unused for now
+        #self.dates_range = pd.date_range(start_date, end_date)
+        #self.start_date = start_date
+        #self.end_date = end_date
+        #self.date = start_date
+        self.date_index_range = np.arange(1996, 2018) # unsafe expression
+        self.date_index = self.date_index_range[0]
+
+        # HYPER-PARAMETER
+        self.observation_space = (1, ) # (state dimension) decided by user
+        # self.action_space = np.array([0, 0.5, 1]) # action_space.shape[0] to get number of action
+        self.alpha_step = 0.5
+        self.action_space = np.arange(0, 1 + self.alpha_step, self.alpha_step)
+        self.reward_type = 'log_return'
+        # self.cost_rate = 0.01
 
         # log
         self.states = []
@@ -25,9 +46,21 @@ class market_envrionment(object):
         self.log = {'state' : self.states, 'action': self.actions, 'reward' : self.rewards}
 
         # calculation variable
-        '''
-        No need for now
-        '''
+        self.portfolio_return = 0
+
+    def reset(self):
+        # self.done = False
+        self.portfolio_return = 0
+        self.date_index = self.date_index_range[0]
+
+        # get begning state
+        stock_return = self.stock_returns.loc[1996] # for first year
+        n = stock_return.shape[1] # number of symbols
+        w = np.array([1/n] * n) # equal weights
+        daily_return = stock_return @ w
+        cumulative_return = (daily_return + 1).prod() - 1
+
+        return cumulative_return
 
     def load_data(self):
         '''load local file(stock, market and TBN) under data folder into object
@@ -94,12 +127,21 @@ class market_envrionment(object):
             state - according to state mapping
         '''
 
-        if self.date in self.dates_range:
+        if not self.done():
             GMVP = self.get_GMVP(action)
-            state = self.portfolio_return(GMVP)
+            self.portfolio_return = self.get_portfolio_return(GMVP)
+            state = self.portfolio_return
             return state
         else:
-            exit()
+            print('The end of period\n')
+            # exit()
+    
+    def done(self):
+        '''Check whether goes to the end'''
+        if self.date_index != self.date_index_range[-1]:
+            return False
+        else: 
+            return True
 
     def get_reward(self):
         # map the reward_type to the reward function
@@ -113,18 +155,28 @@ class market_envrionment(object):
         return reward_current
     
     def step(self, action):
+        '''Take a step in the environment
+
+        '''
         
-        state = self.get_state(action)
+        # respond to agent
+        state = self.get_state(self.action_space[action])
         reward = self.get_reward()
-        self.record_log()
-        return state, reward
+
+        # record experience
+        # self.record_log()
+
+        # move to next period
+        self.date_index += 1 # unsafe expression
+
+        return state, reward, self.done()
 
     def record_log(self):
         """
         Save recording data to csv file
         """
         file_name = os.getcwd() + "/training/" + "training_data_%s.csv" % datetime.now().strftime("%D-%H:%M:%S")
-        df = pd.DataFrame(self.log, columns = columns_name)
+        df = pd.DataFrame(self.log)
         df.to_csv(file_name, index = False)
         print("Output data to", file_name)
     
@@ -137,7 +189,7 @@ class market_envrionment(object):
         '''
         # initialization
         a = alpha
-        period_index = self.date.year # be careful
+        period_index = self.date_index # be careful
         R_1 = self.tbn_combined.loc[period_index].values
         R_2 = self.stock_correlation_aggregate.loc[period_index].values
         volatility_vector = self.stock_volatility_aggregate.loc[period_index]
@@ -157,7 +209,7 @@ class market_envrionment(object):
         #return pd.DataFrame(H)
         return x.reshape((len(x), 1))
 
-    def portfolio_return(self, portfolio_weights):
+    def get_portfolio_return(self, portfolio_weights):
         '''calculate the portfolio return for next period
         Args:
             portfolio_weights (GMVP)
@@ -167,7 +219,7 @@ class market_envrionment(object):
         '''
         # initialization
         w = portfolio_weights
-        period_index = self.date.year
+        period_index = self.date_index
         stocks_returns = self.stock_returns.loc[period_index + 1].values
 
         # portfolio return
@@ -176,24 +228,19 @@ class market_envrionment(object):
 
         return(cumulative_return)
 
-
     def excess_return(self):
         '''
         TO DO
 
         '''
 
-
     def log_return(self):
         '''
-        Calculate 
-
+        Calculate portfolio log return 
         '''
-        R = np.log(self.stock_returns + 1)
-        return R
-
-
-    
+        R = self.portfolio_return
+        r = np.log(R + 1)
+        return r
 
     def sharpe_ratio(self):
         '''
