@@ -1,0 +1,48 @@
+---
+title: "data"
+author: "Cheng Lu"
+date: "4/6/2021"
+output: pdf_document
+---
+
+```{r}
+library(RPostgreSQL)
+library(xtable)
+```
+
+# 1 Download data from PostgreSQL database
+
+```{r}
+# save password
+pw = 'chengcheng'
+# load PostgreSQL driver
+drv = dbDriver("PostgreSQL") 
+# create a connection
+con = dbConnect(drv, dbname = "trna_2", host = "155.246.103.74", port = 5432, 
+                user = "Cheng", password = pw)
+```
+
+```{r}
+# retrive first table
+table.list <- dbListTables(con)
+table.1 <- dbReadTable(con, table.list[1])
+path <- '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/TRNA_V4.news.2006.csv'
+write.csv(table.1, path)
+```
+
+# 2 EDA on news data
+
+```{r}
+table.1 <- read.csv(path)
+subset <- c('id', 'dataType', 'headline', 'feedTimestamp','subjects')
+head(table.1)
+```
+
+```{r}
+print(xtable(head(table.1)['subjects'], type = "latex"), file = "../output/news_smaple.tex")
+```
+
+
+
+
+

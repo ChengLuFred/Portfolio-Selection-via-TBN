@@ -34,7 +34,7 @@ class market_envrionment(object):
         # HYPER-PARAMETER
         self.observation_space = (1, ) # (state dimension) decided by user
         # self.action_space = np.array([0, 0.5, 1]) # action_space.shape[0] to get number of action
-        self.alpha_step = 0.5
+        self.alpha_step = 0.1
         self.action_space = np.arange(0, 1 + self.alpha_step, self.alpha_step)
         self.reward_type = 'log_return'
         # self.cost_rate = 0.01
