@@ -1,0 +1,31 @@
+<mxfile>
+    <diagram id="nwy5YM8B29_RU_dYHl0q" name="Page-1">
+        <mxGraphModel dx="926" dy="729" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="Text Based Network" style="whiteSpace=wrap;html=1;rounded=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="250" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="&lt;h1&gt;Portfolio Selection via Text Based Network&lt;/h1&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=1;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="30" width="690" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="Market Data" style="whiteSpace=wrap;html=1;rounded=1;" parent="1" vertex="1">
+                    <mxGeometry x="690" y="130" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="(Non) - Linear Shrinkage" style="whiteSpace=wrap;html=1;rounded=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="380" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="Minimum Spanning Tree" style="whiteSpace=wrap;html=1;rounded=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="250" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="Reinforcement Learning" style="whiteSpace=wrap;html=1;rounded=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="380" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="Identity Matrix" style="whiteSpace=wrap;html=1;rounded=1;" parent="1" vertex="1">
+                    <mxGeometry x="530" y="250" width="120" height="60" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
