@@ -14,14 +14,12 @@ from numpy.linalg import inv
 from bidict import bidict
 
 # user-defined
-from agent_network import *
-from environment import market_envrionment
-import tensorflow as tf
-tf.config.run_functions_eagerly(True)
+# import tensorflow as tf
+# tf.config.run_functions_eagerly(True)
 
 # visulization
-import igraph
-import cairocffi
+#import igraph
+#import cairocffi
 # import cairo
 import matplotlib.pyplot as plt
 
@@ -32,7 +30,7 @@ import nonlinshrink as nls
 from sklearn.covariance import LedoitWolf
 from sklearn.covariance import OAS
 from scipy.stats import moment
-
+from scipy.sparse.csgraph import minimum_spanning_tree
 '''
 Module Body
 '''
@@ -48,13 +46,15 @@ class vectorized_backtesting:
         self.covariance_aggregate, \
         self.volatility_aggregate = self.stock_analyser(self.stock_price)
 
-        self.portfolio_params = None
+        self.year_start = None
+        self.year_end = None
+        self.portfolio_returns = None
+        self.portfolio = []
 
     def get_portfolio_daily_return_one_period(self, year):
         stocks_returns = self.stocks_returns_aggregate.loc[year]
         portfolio = self.get_portfolio(year)
-        # portfolio = self.get_GMVP(volatility_vector = self.volatility_aggregate.loc[year - 1], 
-        #                     correlation_matrix = self.correlation_aggregate.loc[year - 1])
+        self.portfolio.append(portfolio) # record
         portfolio_returns = stocks_returns @ portfolio
         portfolio_returns = portfolio_returns.values.tolist()
         portfolio_returns = list(chain.from_iterable(portfolio_returns))
@@ -62,14 +62,64 @@ class vectorized_backtesting:
         return portfolio_returns
 
     def get_portfolio_daily_return(self, start, end):
+        self.year_start = start
+        self.year_end = end
         year_range = range(start, end + 1)
-        portfolio_returns = [self.get_portfolio_daily_return_one_period(year) for year in year_range]
-        portfolio_returns = list(chain.from_iterable(portfolio_returns))
+        self.portfolio_returns = [self.get_portfolio_daily_return_one_period(year) for year in year_range]
+        self.portfolio_returns = list(chain.from_iterable(self.portfolio_returns))
         
-        return portfolio_returns
+        return self.portfolio_returns
 
     def get_portfolio(self, year):
         pass
+
+    def get_shrank_cov(self, shrink_target, a, correlation_matrix = None, volatility_vector = None, covariance_matrix = None):
+        '''
+        Calculate shrank covariance matrix given shrink target and shrink intensity.
+        The calculation can be done via shrinking either correlation matrix or
+        covariance matrix.
+        '''
+        # initialization
+        if type(covariance_matrix) == type(None):
+            R_1 = correlation_matrix
+            R_2 = shrink_target
+            D = np.diag(volatility_vector)
+
+            # cov calculation
+            R_3 = (1 - a) * R_1 + a * R_2 # new shrank correlated matrix
+            H = D @ R_3 @ D # new shrank covariance matrix
+        else:
+            R_1 = covariance_matrix
+            R_2 = shrink_target
+
+            # cov calculation
+            H = (1 - a) * R_1 + a * R_2 # new shrank covariance matrix
+
+        return H
+
+    def get_portfolio_mean_return(self, year_start, year_end):
+        '''
+        Calculate portfolio annualized mean return for a period.
+        '''
+        portfolio_daily_return = self.get_portfolio_daily_return(year_start, year_end)
+        portfolio_annualized_mean_return = np.mean(portfolio_daily_return) * 252
+
+        return portfolio_annualized_mean_return
+
+    def get_stock_mean_returns(self, year):
+        '''
+        Calculate the annualized average return for each consistute in the portfolio in given year.
+        Args:
+            year:   int
+                    current year
+        Returns:
+            stocks_mean_returns: np.array
+                                 an array of annualized average return for stocks in portfolio
+        '''
+        stocks_returns = self.stocks_returns_aggregate.loc[year]
+        stocks_mean_returns = stocks_returns.mean().values * 252
+
+        return stocks_mean_returns
 
     def load_data(self):
         '''Load 1. stock price 2. interest rate 3. TBN data 4. company key
@@ -84,7 +134,7 @@ class vectorized_backtesting:
             4. company key    dictionary
         '''
         # initialization
-        file_path = '../data/'
+        file_path = '../../data/'
         rf_date_format = '%Y%m%d' # Y for year, m for month, d for day
         stock_date_format = '%Y-%m-%d' # Y for year, m for month, d for day
 
@@ -111,7 +161,7 @@ class vectorized_backtesting:
         interest_rate.index = rf_date
 
         # load TBN data
-        file_path = '../data/'
+        #file_path = '../data/'
         file_type = 'TBN_*.csv'
         file_list = glob.glob(file_path + file_type)
 
@@ -176,7 +226,7 @@ class vectorized_backtesting:
         '''
         # initialization
         if type(correlation_matrix) != type(None):
-            R = correlation_matrix.values
+            R = correlation_matrix
             D = np.diag(volatility_vector)
             H = D @ R @ D
         else:
@@ -196,7 +246,7 @@ class vectorized_backtesting:
 
     # - - - - - - - - - - - - - - - - - - - - -
 
-    def sharpe_ratio(self, portfolio_return, interest_rate):
+    def get_sharpe_ratio(self):
         '''Given portfolio daily returns to calculate Sharpe ratio
 
         Argument:
@@ -206,18 +256,37 @@ class vectorized_backtesting:
             a DataFrame (T x 1) of Sharpe ratio
         '''
         # initialization
-        date_idx = portfolio_return.index
-        r_f = interest_rate.loc[date_idx].values.flatten()
+        start_date = str(self.year_start) + '-01-01'
+        end_date = str(self.year_end) + '-12-31'
+        r_f = self.interest_rate.loc[start_date: end_date].values.flatten()
+        portfolio_returns = np.array(self.portfolio_returns)
 
         # calculate SR
-        excess_return = portfolio_return - r_f * 0.01
+        excess_return = portfolio_returns - r_f * 0.01
         expected_return = excess_return.mean() * 252 # annualized
         volatility = excess_return.std()* np.sqrt(252) # annualized
         sharpe_ratio = expected_return / volatility
         
         # transform to dataframe
-        temp = pd.DataFrame(sharpe_ratio, index=['Sharpe ratio']).T
+        #temp = pd.DataFrame(sharpe_ratio, index=['Sharpe ratio']).T
         
-        return temp
+        return sharpe_ratio
+
+    # - - - - - - - - - - - - - - - - - - - - -
+    
+    def get_turn_over_for_each_period(self):
+        def get_turn_over_for_one_period(port_1, port_2):
+            sell_and_buy = np.abs(np.array(port_2) - np.array(port_1))
+            turn_over = sell_and_buy.sum() / 2
+            return turn_over
+
+        before_balance = self.portfolio[:-1]
+        after_balance = self.portfolio[1:]
+        turn_over_list = [get_turn_over_for_one_period(port_1, port_2) \
+                          for port_1, port_2 in zip(before_balance, after_balance)]
+
+        return turn_over_list
+
+    
 
     

@@ -7,3 +7,6 @@ picture/
 .Rhistory
 *.h5
 data/*.news.*.csv
+output/dqn/
+codes/log
+*.pyc
