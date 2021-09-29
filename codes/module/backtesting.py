@@ -12,6 +12,7 @@ import glob
 import os
 from numpy.linalg import inv
 from bidict import bidict
+from itertools import combinations, product
 
 # user-defined
 # import tensorflow as tf
@@ -36,15 +37,28 @@ Module Body
 '''
 class vectorized_backtesting:
     def __init__(self):
-        self.stock_price, \
+        _, \
         self.interest_rate, \
-        self.tbn_combined,\
-        self.company_key = self.load_data()
+        _,\
+        _ = self.load_data()
 
-        self.stocks_returns_aggregate, \
-        self.correlation_aggregate, \
-        self.covariance_aggregate, \
-        self.volatility_aggregate = self.stock_analyser(self.stock_price)
+        # self.stocks_returns_aggregate, \
+        # self.correlation_aggregate, \
+        # self.covariance_aggregate, \
+        # self.volatility_aggregate = self.stock_analyser(self.stock_price)
+
+        self.gvkey_to_PERMNO_mappinp = self.get_gvkey_to_PERMNO_mapping()
+        self.PERMNO_to_gvkey_mapping = self.get_PERMNO_to_gvkey_mapping()
+
+        sample_size = 50
+        self.tbn_combined = self.load_tbn(sample_size)
+        self.company_subset_PERMNO_vector = self.get_company_PERMNO()
+        self.stock_return = self.load_stock_return()
+        
+        self.stocks_returns_aggregate = self.stock_return
+        self.correlation_aggregate = self.get_correlation_matrix()
+        self.covariance_aggregate = self.get_covariance_matrix()
+        self.volatility_aggregate = self.get_volatility()
 
         self.year_start = None
         self.year_end = None
@@ -121,8 +135,102 @@ class vectorized_backtesting:
 
         return stocks_mean_returns
 
+    def get_gvkey_to_PERMNO_mapping(self) -> dict:
+        '''
+        Get PERMNO (permanent security identification number assigned by CRSP to each security) to 
+        gvkey (six-digit number key assigned to each company in the Capital IQ Compustat database) mapping
+
+        returns:
+                gvkey_to_PERMNO_mapping: a mapping from gvkey to PERMNO
+        '''
+        
+        PERMNO_gvkey_key_file_path = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/Data/gvkey_id.csv'
+        key_df = pd.read_csv(PERMNO_gvkey_key_file_path, sep=",", header=0, engine='c')
+        PERMNO_gvkey_pairs = [(PERMNO, gvkey) for PERMNO, gvkey in zip(key_df['PERMNO'], key_df['gvkey'])]
+        PERMNO_gvkey_pairs_unique = set(PERMNO_gvkey_pairs)
+        gvkey_to_PERMNO_mapping = {gvkey:PERMNO for PERMNO, gvkey in PERMNO_gvkey_pairs_unique}
+
+        return gvkey_to_PERMNO_mapping
+
+    def get_PERMNO_to_gvkey_mapping(self) -> dict:
+        '''
+        Get PERMNO (permanent security identification number assigned by CRSP to each security) to 
+        gvkey (six-digit number key assigned to each company in the Capital IQ Compustat database) mapping
+
+        returns:
+                PERMNO_to_gvkey_mapping: a mapping from PERMNO to gvkey
+        '''
+        
+        PERMNO_gvkey_key_file_path = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/Data/gvkey_id.csv'
+        key_df = pd.read_csv(PERMNO_gvkey_key_file_path, sep=",", header=0, engine='c')
+        PERMNO_gvkey_pairs = [(PERMNO, gvkey) for PERMNO, gvkey in zip(key_df['PERMNO'], key_df['gvkey'])]
+        PERMNO_gvkey_pairs_unique = set(PERMNO_gvkey_pairs)
+        PERMNO_to_gvkey_mapping = {PERMNO:gvkey for PERMNO, gvkey in PERMNO_gvkey_pairs_unique}
+
+        return PERMNO_to_gvkey_mapping
+
+    def get_company_PERMNO(self) -> np.array:
+        '''
+
+        '''
+        company_gvkey_vector = self.tbn_combined.columns 
+        company_subset_PERMNO_vector = [self.gvkey_to_PERMNO_mappinp[int(gvkey)] for gvkey in company_gvkey_vector]
+
+        return company_subset_PERMNO_vector
+
+    def load_stock_return(self) -> pd.DataFrame:
+        '''
+        Load stocks returns time series from CRSP dataset.
+        It's a daily time series between 1989 to 2019.
+        '''
+        stock_date_format = '%m/%d/%y' # Y for year, m for month, d for day
+        stock_return_file_path = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/Data/permno_ret.csv'
+        stock_returns = pd.read_csv(stock_return_file_path,  header=0, index_col=[0], engine='c')
+        stock_returns = stock_returns.dropna(axis='columns') # drop incomplete data to make TBN consitency cross year
+        stock_returns.columns = [int(x) for x in stock_returns.columns]
+        stock_date = pd.Index([datetime.strptime(x, stock_date_format) for x in stock_returns.index])
+        stock_returns.index = [x.year for x in stock_date] # set year as index 
+        stock_returns = stock_returns[self.company_subset_PERMNO_vector]
+
+        return stock_returns
+
+    def load_tbn(self, sample_identifier) -> pd.DataFrame:
+        '''
+        
+        '''
+        # load TBN data
+        file_path_root = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/TBN/'
+        file_path_prefix = 'sample_company_'
+        sample_identifier = str(sample_identifier)
+        file_type = '/*.csv'
+        file_list = glob.glob(file_path_root + file_path_prefix + sample_identifier + file_type)
+
+        idx = pd.Index
+        tbn_combined = pd.DataFrame()
+        year_range = []
+
+        for file in file_list:
+            tbn = pd.read_csv(file,  header = 0, index_col = [0], engine='c')
+            row_num = tbn.shape[0]
+            year = int(file.split('/')[-1][-8:-4]) # not safe expression
+            year_range.append(year)
+            year_idx = idx(np.repeat(year, row_num))
+            tbn.set_index(year_idx, append = True, inplace = True)
+            tbn_combined = tbn_combined.append(tbn)
+
+        tbn_combined = tbn_combined.reorder_levels(order=[1,0])
+        tbn_combined = tbn_combined.dropna(axis='columns')
+        gvkey_vector = [int(x) for x in tbn_combined.columns]
+        idx_subset = list(product(year_range, gvkey_vector))
+        tbn_combined = tbn_combined.loc[idx_subset]
+
+        return tbn_combined
+
+
     def load_data(self):
-        '''Load 1. stock price 2. interest rate 3. TBN data 4. company key
+        '''
+        (abolished! Turn to alternative function)
+        Load 1. stock price 2. interest rate 3. TBN data 4. company key
 
         Argument:
             None
@@ -185,6 +293,31 @@ class vectorized_backtesting:
         return stock_price, interest_rate, tbn_combined, company_key
 
     # - - - - - - - - - - - - - - - - - - - - -
+    def get_correlation_matrix(self):
+        '''
+        correlation matrix for each year
+        '''
+        correlation_aggregate = self.stock_return.groupby(level=0).corr() 
+
+        return correlation_aggregate
+
+    def get_covariance_matrix(self):
+        '''
+        annualized covariance matrix for each year
+        '''
+        covariance_aggregate = self.stock_return.groupby(level=0).cov() * 252
+
+        return covariance_aggregate
+
+    def get_volatility(self):
+        '''
+        annualized volatility vector for each year
+        '''
+        volatility_aggregate = self.stock_return.groupby(level=0).std() * np.sqrt(252)
+
+        return volatility_aggregate
+
+
 
     def stock_analyser(self, stock_price):
         '''Analyze stock price to calculate indicators

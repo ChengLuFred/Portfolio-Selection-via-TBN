@@ -96,9 +96,16 @@ class market_environment(vectorized_backtesting):
             print('The end of period\n')
             # exit()
     
+    # def get_portfolio(self, year):
+    #     covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year - 1].values,\
+    #                                             shrink_target=np.identity(23),\
+    #                                             a=self.action)
+    #     portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
+    #     return portfolio
     def get_portfolio(self, year):
-        covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year - 1].values,\
-                                                shrink_target=np.identity(23),\
+        covariance_shrunk = self.get_shrank_cov(correlation_matrix=self.correlation_aggregate.loc[year - 1].values,\
+                                                shrink_target=self.tbn_combined.loc[year - 1].values,\
+                                                volatility_vector=self.volatility_aggregate.loc[year - 1].values,
                                                 a=self.action)
         portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
         return portfolio
@@ -128,7 +135,10 @@ class market_environment(vectorized_backtesting):
         return reward
     
     def action_wrapper(self):
-        # action warapper
+        '''
+        Action mapping to discretize continuous action space。
+        Map agent's action(integer) to shrinkage intensity
+        '''
         self.alpha_step = 0.1
         self.ACTION_MAPPING = np.arange(0, 1 + self.alpha_step, self.alpha_step)
         self.ACTION_MAPPING = self.ACTION_MAPPING.reshape(len(self.ACTION_MAPPING), 1)
