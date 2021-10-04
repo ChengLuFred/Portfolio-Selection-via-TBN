@@ -19,7 +19,7 @@ import tensorflow as tf
 tf.config.run_functions_eagerly(True)
 
 # visulization
-import igraph
+# import igraph
 # import cairo
 import matplotlib.pyplot as plt
 
@@ -112,3 +112,21 @@ class data_handler:
                         
                         identifier =file.split('/')[-1][-8:-4]
                         stock_pair_tbn_score_subset.to_csv(file_output_path + identifier + file_output_type)
+
+        def export_dataframe_to_latex_table(
+                                        df: pd.DataFrame, 
+                                        table_name: str,
+                                        output_path: str = '/Users/cheng/Dropbox/Apps/Overleaf/Portfolio Selection via Text Based Network/table',
+                                        caption: str = None,
+                                        label:str = None
+                                        ) -> str:
+                                        
+                output_file_path = output_path + '/' + table_name + '.tex'
+                float_format = "%.3f"
+
+                latex_table = df.to_latex(output_file_path, 
+                                        float_format=float_format, 
+                                        caption=caption, 
+                                        label=label)
+
+                return latex_table
