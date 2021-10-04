@@ -127,6 +127,7 @@ class data_handler:
                 latex_table = df.to_latex(output_file_path, 
                                         float_format=float_format, 
                                         caption=caption, 
-                                        label=label)
+                                        label=label,
+                                        position = 'h!')
 
                 return latex_table
