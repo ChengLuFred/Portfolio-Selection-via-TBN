@@ -13,6 +13,7 @@ import os
 from numpy.linalg import inv
 from bidict import bidict
 from itertools import combinations, product
+from typing import Union
 
 # user-defined
 # import tensorflow as tf
@@ -36,36 +37,47 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 Module Body
 '''
 class vectorized_backtesting:
-    def __init__(self):
-        _, \
-        self.interest_rate, \
-        _,\
-        _ = self.load_data()
+    def __init__(self, sample_size: int = 50):
+        '''
+        
+        '''
+
+        # company key mapping
+        self.gvkey_to_PERMNO_mappinp = self.get_gvkey_to_PERMNO_mapping()
+        self.PERMNO_to_gvkey_mapping = self.get_PERMNO_to_gvkey_mapping()
+
+        # load data
+        self.tbn_combined = self.load_tbn(sample_size)
+        self.company_subset_PERMNO_vector = self.get_company_PERMNO()
+        self.stock_return = self.load_stock_return()
+        self.interest_rate = self.load_interest_rate()
+        
+        # stock data preprocessing
+        self.stocks_returns_aggregate = self.stock_return
+        self.correlation_aggregate = self.get_correlation_matrix()
+        self.covariance_aggregate = self.get_covariance_matrix()
+        self.volatility_aggregate = self.get_volatility()
+
+        # container
+        self.year_start = None
+        self.year_end = None
+        self.portfolio_returns = None
+        self.portfolio = []
+
+        # _, \
+        # self.interest_rate, \
+        # _,\
+        # _ = self.load_data()
 
         # self.stocks_returns_aggregate, \
         # self.correlation_aggregate, \
         # self.covariance_aggregate, \
         # self.volatility_aggregate = self.stock_analyser(self.stock_price)
 
-        self.gvkey_to_PERMNO_mappinp = self.get_gvkey_to_PERMNO_mapping()
-        self.PERMNO_to_gvkey_mapping = self.get_PERMNO_to_gvkey_mapping()
-
-        sample_size = 50
-        self.tbn_combined = self.load_tbn(sample_size)
-        self.company_subset_PERMNO_vector = self.get_company_PERMNO()
-        self.stock_return = self.load_stock_return()
-        
-        self.stocks_returns_aggregate = self.stock_return
-        self.correlation_aggregate = self.get_correlation_matrix()
-        self.covariance_aggregate = self.get_covariance_matrix()
-        self.volatility_aggregate = self.get_volatility()
-
-        self.year_start = None
-        self.year_end = None
-        self.portfolio_returns = None
-        self.portfolio = []
-
-    def get_portfolio_daily_return_one_period(self, year):
+    def get_portfolio_daily_return_one_period(self, year: int) -> list:
+        '''
+        Get portfolio daily returns time series for one period(a year)
+        '''
         stocks_returns = self.stocks_returns_aggregate.loc[year]
         portfolio = self.get_portfolio(year)
         self.portfolio.append(portfolio) # record
@@ -75,7 +87,10 @@ class vectorized_backtesting:
 
         return portfolio_returns
 
-    def get_portfolio_daily_return(self, start, end):
+    def get_portfolio_daily_return(self, start: int, end: int) -> list:
+        '''
+        Get portfolio daily returns time series for whole period from 'start' year til 'end' year.
+        '''
         self.year_start = start
         self.year_end = end
         year_range = range(start, end + 1)
@@ -84,10 +99,21 @@ class vectorized_backtesting:
         
         return self.portfolio_returns
 
-    def get_portfolio(self, year):
+    def get_portfolio(self, year: int) -> pd.DataFrame:
+        '''
+        The core function of backtesting system.
+        Need to be overload by specific strategy(child class)
+        '''
         pass
 
-    def get_shrank_cov(self, shrink_target, a, correlation_matrix = None, volatility_vector = None, covariance_matrix = None):
+    def get_shrank_cov(
+                    self, 
+                    shrink_target: Union[pd.DataFrame, np.array],
+                    a: int,
+                    correlation_matrix: Union[pd.DataFrame, np.array] = None, 
+                    volatility_vector: Union[pd.DataFrame, np.array] = None, 
+                    covariance_matrix: Union[pd.DataFrame, np.array] = None
+                    ) -> Union[pd.DataFrame, np.array]:
         '''
         Calculate shrank covariance matrix given shrink target and shrink intensity.
         The calculation can be done via shrinking either correlation matrix or
@@ -111,7 +137,7 @@ class vectorized_backtesting:
 
         return H
 
-    def get_portfolio_mean_return(self, year_start, year_end):
+    def get_portfolio_mean_return(self, year_start: int, year_end: int) -> np.float_:
         '''
         Calculate portfolio annualized mean return for a period.
         '''
@@ -120,18 +146,15 @@ class vectorized_backtesting:
 
         return portfolio_annualized_mean_return
 
-    def get_stock_mean_returns(self, year):
+    def get_stock_mean_returns(self, year: int) -> np.float_:
         '''
         Calculate the annualized average return for each consistute in the portfolio in given year.
-        Args:
-            year:   int
-                    current year
         Returns:
             stocks_mean_returns: np.array
                                  an array of annualized average return for stocks in portfolio
         '''
         stocks_returns = self.stocks_returns_aggregate.loc[year]
-        stocks_mean_returns = stocks_returns.mean().values * 252
+        stocks_mean_returns = np.mean(stocks_returns.values) * 252
 
         return stocks_mean_returns
 
@@ -171,7 +194,7 @@ class vectorized_backtesting:
 
     def get_company_PERMNO(self) -> np.array:
         '''
-
+        Company subset's PERMNO key(permanent security identification number assigned by CRSP to each security).
         '''
         company_gvkey_vector = self.tbn_combined.columns 
         company_subset_PERMNO_vector = [self.gvkey_to_PERMNO_mappinp[int(gvkey)] for gvkey in company_gvkey_vector]
@@ -196,9 +219,8 @@ class vectorized_backtesting:
 
     def load_tbn(self, sample_identifier) -> pd.DataFrame:
         '''
-        
+        Load TBN data from local.
         '''
-        # load TBN data
         file_path_root = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/TBN/'
         file_path_prefix = 'sample_company_'
         sample_identifier = str(sample_identifier)
@@ -227,73 +249,20 @@ class vectorized_backtesting:
         return tbn_combined
 
 
-    def load_data(self):
+    def load_interest_rate(self) -> pd.DataFrame:
         '''
-        (abolished! Turn to alternative function)
-        Load 1. stock price 2. interest rate 3. TBN data 4. company key
-
-        Argument:
-            None
-
-        Return:
-            1. stock price 
-            2. interest rate  data frame
-            3. TBN data       data frame
-            4. company key    dictionary
+        load interest rate data from Kenneth R. French - Data Library
+        (https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html)
         '''
-        # initialization
-        file_path = '../../data/'
-        rf_date_format = '%Y%m%d' # Y for year, m for month, d for day
-        stock_date_format = '%Y-%m-%d' # Y for year, m for month, d for day
-
-        # load company key
-        file_name = 'gvkey_ticker.csv'
-        company_key = pd.read_csv(file_path + file_name,  header=0, usecols=[1, 2], index_col = [0], engine='c')
-        company_key = company_key.loc[~company_key.index.duplicated(keep='first')] # remove duplicated ticker
-        company_key = company_key.to_dict()['gvkey'] # convert to dictionary
-        company_key = bidict(company_key) # convert it to bidirectional dictionary
-
-        # load stock price
-        file_name = 'stock_data.csv'
-        stock_price = pd.read_csv(file_path + file_name,  header=0, index_col=[0], engine='c')
-        stock_price = stock_price.dropna(axis='columns') # drop incomplete data to form 26 columns
-        #stock_subset = stock_price.dropna(axis='columns').columns # drop stock has incomplete data
-        #tickers_key = company_key.loc[stock_subset].gvkey.values
-        stock_date = pd.Index([datetime.strptime(x, stock_date_format) for x in stock_price.index])
-        stock_price.index = [x.year for x in stock_date] # set year as index 
-
-        # load interest rate
-        file_name = 'F-F_Research_Data_Factors_daily.csv'
-        interest_rate = pd.read_csv(file_path + file_name,  header=0, usecols=[0, 4], index_col=[0], engine='c').dropna()
-        rf_date = pd.Index([datetime.strptime(str(x), rf_date_format) for x in interest_rate.index]) # convert index to date object
+        file_path = '../../data/F-F_Research_Data_Factors_daily.csv'
+        date_format = '%Y%m%d' # Y for year, m for month, d for day
+        interest_rate = pd.read_csv(file_path,  header=0, usecols=[0, 4], index_col=[0], engine='c').dropna()
+        rf_date = pd.Index([datetime.strptime(str(x), date_format) for x in interest_rate.index]) # convert index to date object
         interest_rate.index = rf_date
 
-        # load TBN data
-        #file_path = '../data/'
-        file_type = 'TBN_*.csv'
-        file_list = glob.glob(file_path + file_type)
+        return interest_rate
 
-        idx = pd.Index
-        tbn_combined = pd.DataFrame()
-        for file in file_list:
-            
-            tbn = pd.read_csv(file,  header = 0, index_col = [0], engine='c')
-            # np.fill_diagonal(tbn.values, 0)
-
-            # index tbn by year
-            row_num = tbn.shape[0]
-            year = int(file.split('/')[-1][4:8]) # not safe expression
-            year_idx = idx(np.repeat(year, row_num))
-            tbn.set_index(year_idx, append = True, inplace = True)
-
-            # combine each year tbn
-            tbn_combined = tbn_combined.append(tbn)
-        tbn_combined = tbn_combined.reorder_levels(order=[1,0])
-
-        return stock_price, interest_rate, tbn_combined, company_key
-
-    # - - - - - - - - - - - - - - - - - - - - -
-    def get_correlation_matrix(self):
+    def get_correlation_matrix(self) -> pd.DataFrame:
         '''
         correlation matrix for each year
         '''
@@ -301,7 +270,7 @@ class vectorized_backtesting:
 
         return correlation_aggregate
 
-    def get_covariance_matrix(self):
+    def get_covariance_matrix(self) -> pd.DataFrame:
         '''
         annualized covariance matrix for each year
         '''
@@ -309,7 +278,7 @@ class vectorized_backtesting:
 
         return covariance_aggregate
 
-    def get_volatility(self):
+    def get_volatility(self) -> pd.DataFrame:
         '''
         annualized volatility vector for each year
         '''
@@ -317,39 +286,12 @@ class vectorized_backtesting:
 
         return volatility_aggregate
 
-
-
-    def stock_analyser(self, stock_price):
-        '''Analyze stock price to calculate indicators
-
-        Arguments:
-            stock_price: T x N data frame
-                        N - stock numbers
-                        T - observation numbers
-                        index is year number
-        Returns:
-            1. stock_returns
-            2. correlation_aggregate
-            3. covariance_aggregate
-            4. volatility_aggregate
-        '''
-        # stock returns
-        stock_returns = stock_price.pct_change().dropna(axis='rows') # the first row is dropped
-
-        # correlation matrix for each year
-        correlation_aggregate = stock_returns.groupby(level=0).corr() 
-
-        # annualized covariance matrix for each year
-        covariance_aggregate = stock_returns.groupby(level=0).cov() * 252
-
-        # annualized volatility vector for each year
-        volatility_aggregate = stock_returns.groupby(level=0).std() * np.sqrt(252)
-
-        return stock_returns, correlation_aggregate, covariance_aggregate, volatility_aggregate
-
-    # - - - - - - - - - - - - - - - - - - - - -
-
-    def get_GMVP(self, correlation_matrix = None, volatility_vector = None, covariance_matrix = None):
+    def get_GMVP(
+                self, 
+                correlation_matrix: Union[pd.DataFrame, np.array]  = None, 
+                volatility_vector: Union[pd.DataFrame, np.array] = None, 
+                covariance_matrix: Union[pd.DataFrame, np.array] = None
+                ) -> Union[pd.DataFrame, np.array]:
         '''Get Global Minimum Variance Portfolio
         Args:
             correlation_matrix: correlation matrix used to build GMVP
@@ -377,14 +319,9 @@ class vectorized_backtesting:
         # reshape to column vector
         return x.reshape((len(x), 1))
 
-    # - - - - - - - - - - - - - - - - - - - - -
-
-    def get_sharpe_ratio(self):
+    def get_sharpe_ratio(self) -> np.float_:
         '''Given portfolio daily returns to calculate Sharpe ratio
 
-        Argument:
-            portfolio_return: a dataframe(T x 1) containing portfolio daily return time series
-            interest_rate:    a dataframe(T x 1) containing risk free rate
         Return:
             a DataFrame (T x 1) of Sharpe ratio
         '''
@@ -405,9 +342,7 @@ class vectorized_backtesting:
         
         return sharpe_ratio
 
-    # - - - - - - - - - - - - - - - - - - - - -
-    
-    def get_turn_over_for_each_period(self):
+    def get_turn_over_for_each_period(self) -> list:
         def get_turn_over_for_one_period(port_1, port_2):
             sell_and_buy = np.abs(np.array(port_2) - np.array(port_1))
             turn_over = sell_and_buy.sum() / 2
@@ -419,6 +354,104 @@ class vectorized_backtesting:
                           for port_1, port_2 in zip(before_balance, after_balance)]
 
         return turn_over_list
+
+    # - - - - - - - - - - - - - - - - - - - - -
+    # Abolished !!!
+    # - - - - - - - - - - - - - - - - - - - - -
+
+    # def load_data(self):
+    #     '''
+    #     (abolished! Turn to alternative function)
+    #     Load 1. stock price 2. interest rate 3. TBN data 4. company key
+
+    #     Argument:
+    #         None
+
+    #     Return:
+    #         1. stock price 
+    #         2. interest rate  data frame
+    #         3. TBN data       data frame
+    #         4. company key    dictionary
+    #     '''
+    #     # initialization
+    #     file_path = '../../data/'
+    #     rf_date_format = '%Y%m%d' # Y for year, m for month, d for day
+    #     stock_date_format = '%Y-%m-%d' # Y for year, m for month, d for day
+
+    #     # load company key
+    #     file_name = 'gvkey_ticker.csv'
+    #     company_key = pd.read_csv(file_path + file_name,  header=0, usecols=[1, 2], index_col = [0], engine='c')
+    #     company_key = company_key.loc[~company_key.index.duplicated(keep='first')] # remove duplicated ticker
+    #     company_key = company_key.to_dict()['gvkey'] # convert to dictionary
+    #     company_key = bidict(company_key) # convert it to bidirectional dictionary
+
+    #     # load stock price
+    #     file_name = 'stock_data.csv'
+    #     stock_price = pd.read_csv(file_path + file_name,  header=0, index_col=[0], engine='c')
+    #     stock_price = stock_price.dropna(axis='columns') # drop incomplete data to form 26 columns
+    #     #stock_subset = stock_price.dropna(axis='columns').columns # drop stock has incomplete data
+    #     #tickers_key = company_key.loc[stock_subset].gvkey.values
+    #     stock_date = pd.Index([datetime.strptime(x, stock_date_format) for x in stock_price.index])
+    #     stock_price.index = [x.year for x in stock_date] # set year as index 
+
+    #     # load interest rate
+    #     file_name = 'F-F_Research_Data_Factors_daily.csv'
+    #     interest_rate = pd.read_csv(file_path + file_name,  header=0, usecols=[0, 4], index_col=[0], engine='c').dropna()
+    #     rf_date = pd.Index([datetime.strptime(str(x), rf_date_format) for x in interest_rate.index]) # convert index to date object
+    #     interest_rate.index = rf_date
+
+    #     # load TBN data
+    #     #file_path = '../data/'
+    #     file_type = 'TBN_*.csv'
+    #     file_list = glob.glob(file_path + file_type)
+
+    #     idx = pd.Index
+    #     tbn_combined = pd.DataFrame()
+    #     for file in file_list:
+            
+    #         tbn = pd.read_csv(file,  header = 0, index_col = [0], engine='c')
+    #         # np.fill_diagonal(tbn.values, 0)
+
+    #         # index tbn by year
+    #         row_num = tbn.shape[0]
+    #         year = int(file.split('/')[-1][4:8]) # not safe expression
+    #         year_idx = idx(np.repeat(year, row_num))
+    #         tbn.set_index(year_idx, append = True, inplace = True)
+
+    #         # combine each year tbn
+    #         tbn_combined = tbn_combined.append(tbn)
+    #     tbn_combined = tbn_combined.reorder_levels(order=[1,0])
+
+    #     return stock_price, interest_rate, tbn_combined, company_key
+
+    # def stock_analyser(self, stock_price):
+    #     '''Analyze stock price to calculate indicators
+
+    #     Arguments:
+    #         stock_price: T x N data frame
+    #                     N - stock numbers
+    #                     T - observation numbers
+    #                     index is year number
+    #     Returns:
+    #         1. stock_returns
+    #         2. correlation_aggregate
+    #         3. covariance_aggregate
+    #         4. volatility_aggregate
+    #     '''
+    #     # stock returns
+    #     stock_returns = stock_price.pct_change().dropna(axis='rows') # the first row is dropped
+
+    #     # correlation matrix for each year
+    #     correlation_aggregate = stock_returns.groupby(level=0).corr() 
+
+    #     # annualized covariance matrix for each year
+    #     covariance_aggregate = stock_returns.groupby(level=0).cov() * 252
+
+    #     # annualized volatility vector for each year
+    #     volatility_aggregate = stock_returns.groupby(level=0).std() * np.sqrt(252)
+
+    #     return stock_returns, correlation_aggregate, covariance_aggregate, volatility_aggregate
+
 
     
 
