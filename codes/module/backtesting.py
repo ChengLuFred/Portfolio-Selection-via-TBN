@@ -254,7 +254,7 @@ class vectorized_backtesting:
         load interest rate data from Kenneth R. French - Data Library
         (https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html)
         '''
-        file_path = '../../data/F-F_Research_Data_Factors_daily.csv'
+        file_path = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/Data/F-F_Research_Data_Factors_daily.csv'
         date_format = '%Y%m%d' # Y for year, m for month, d for day
         interest_rate = pd.read_csv(file_path,  header=0, usecols=[0, 4], index_col=[0], engine='c').dropna()
         rf_date = pd.Index([datetime.strptime(str(x), date_format) for x in interest_rate.index]) # convert index to date object

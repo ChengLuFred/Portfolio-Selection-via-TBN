@@ -55,7 +55,7 @@ class data_handler:
                 '''
                 stock_returns_file_path = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/Data/permno_ret.csv'
                 stock_returns_df = pd.read_csv(stock_returns_file_path, sep=",", header=0, index_col=[0],engine='c')
-                company_subset_PERMNO_vector = stock_returns_df.columns
+                company_subset_PERMNO_vector = [int(PERMNO) for PERMNO in stock_returns_df.columns]
 
                 return company_subset_PERMNO_vector
 
@@ -63,14 +63,15 @@ class data_handler:
                 '''
                 Map company subset's PERMNO key vector to their gvkey vector
                 '''
-                company_subset_gvkey_vector = [self.PERMNO_to_gvkey_mapping[int(PERMNO)] for PERMNO in self.company_PERMNO_vector]
+                company_subset_gvkey_vector = [self.PERMNO_to_gvkey_mapping[PERMNO] for PERMNO in self.company_PERMNO_vector]
 
                 return company_subset_gvkey_vector
 
         def extract_TNIC_network_subset(self, 
-                                        file_input_path:str,
+                                        key_list:np.array,
                                         file_output_path:str,
-                                        key_list:np.array) -> None:
+                                        file_input_path:str = '/Users/cheng/Documents/Research Data/Text Base Network/new/tnic_all_data/'
+                                        ) -> None:
                 '''
                 Extract companies' TBN score subset from TNIC(Text-based Network Industry Classification) txt file.
                 (available in Hoberger's database: http://hobergphillips.tuck.dartmouth.edu/idata/tnic_all_data.zip)
@@ -113,17 +114,18 @@ class data_handler:
                         identifier =file.split('/')[-1][-8:-4]
                         stock_pair_tbn_score_subset.to_csv(file_output_path + identifier + file_output_type)
 
-        def export_dataframe_to_latex_table(
+        def export_dataframe_to_latex_table(self,
                                         df: pd.DataFrame, 
                                         table_name: str,
                                         output_path: str = '/Users/cheng/Dropbox/Apps/Overleaf/Portfolio Selection via Text Based Network/table',
+                                        float_format = "%.3f",
                                         caption: str = None,
                                         label:str = None
                                         ) -> str:
                                         
                 output_file_path = output_path + '/' + table_name + '.tex'
-                float_format = "%.3f"
-
+                caption = r'\textbf{' + table_name + r'} \\ ' + caption
+                
                 latex_table = df.to_latex(output_file_path, 
                                         float_format=float_format, 
                                         caption=caption, 
