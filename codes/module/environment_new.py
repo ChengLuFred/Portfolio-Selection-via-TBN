@@ -1,6 +1,6 @@
 import sys
 sys.path.append('/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/codes/')
-from module.backtesting import *
+from module.backtesting_old import * # be careful which version is imported!!!
 from gym.utils import seeding
 import gym
 

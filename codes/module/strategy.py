@@ -149,3 +149,20 @@ class MST_tbn(vectorized_backtesting):
         portfolio = self.get_GMVP( volatility_vector = self.volatility_aggregate.loc[year - 1], 
                             correlation_matrix = MST)
         return portfolio
+
+
+class shrink_fixed_alpha_in_sample(vectorized_backtesting):
+    '''
+    Shrink sample covariance matrix a fixed percent to identity matrix
+    '''
+    def __init__(self, alpha):
+        super().__init__()
+        self.alpha = alpha
+        self.stock_num = self.covariance_aggregate.shape[1]
+
+    def get_portfolio(self, year):
+        covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year].values,\
+                                                shrink_target=np.identity(self.stock_num),\
+                                                a=self.alpha)
+        portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
+        return portfolio

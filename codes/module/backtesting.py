@@ -154,7 +154,7 @@ class vectorized_backtesting:
                                  an array of annualized average return for stocks in portfolio
         '''
         stocks_returns = self.stocks_returns_aggregate.loc[year]
-        stocks_mean_returns = np.mean(stocks_returns.values) * 252
+        stocks_mean_returns = stocks_returns.mean().values * 252
 
         return stocks_mean_returns
 
