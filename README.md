@@ -1,4 +1,4 @@
-# Portfolio-Selection-via-TBN
+# Improved Estimation of the Covariance Matrix using Reinforcement Learning
 This project is dedicated to use RL to find optimal shrinkage intensity to construct non-myopic portfolio
 
 - [codes](https://github.com/ChengLuFred/Portfolio-Selection-via-TBN/tree/master/codes): contains all sources codes including envrionment etc.
