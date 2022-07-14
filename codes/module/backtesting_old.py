@@ -63,6 +63,7 @@ class vectorized_backtesting:
         self.year_end = None
         self.portfolio_returns = None
         self.portfolio = []
+        self.stock_date = None
 
         self.stock_price, \
         self.interest_rate, \
@@ -390,8 +391,8 @@ class vectorized_backtesting:
         stock_price = stock_price.dropna(axis='columns') # drop incomplete data to form 26 columns
         #stock_subset = stock_price.dropna(axis='columns').columns # drop stock has incomplete data
         #tickers_key = company_key.loc[stock_subset].gvkey.values
-        stock_date = pd.Index([datetime.strptime(x, stock_date_format) for x in stock_price.index])
-        stock_price.index = [x.year for x in stock_date] # set year as index 
+        self.stock_date = pd.Index([datetime.strptime(x, stock_date_format) for x in stock_price.index])
+        stock_price.index = [x.year for x in self.stock_date] # set year as index 
 
         # load interest rate
         file_path = '/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/data/Data/F-F_Research_Data_Factors_daily.csv'

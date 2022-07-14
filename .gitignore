@@ -10,3 +10,6 @@ data/*.news.*.csv
 output/dqn/
 codes/log
 *.pyc
+data/*
+documents/
+output/

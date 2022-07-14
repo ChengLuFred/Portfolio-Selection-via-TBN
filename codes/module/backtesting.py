@@ -37,7 +37,7 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 Module Body
 '''
 class vectorized_backtesting:
-    def __init__(self, sample_size: int = 50):
+    def __init__(self, sample_size: int = 150):
         '''
         
         '''
@@ -342,7 +342,7 @@ class vectorized_backtesting:
         
         return sharpe_ratio
 
-    def get_turn_over_for_each_period(self) -> list:
+    def get_turn_over_for_each_period(self) -> list: # wrong function. Need to be re-written
         def get_turn_over_for_one_period(port_1, port_2):
             sell_and_buy = np.abs(np.array(port_2) - np.array(port_1))
             turn_over = sell_and_buy.sum() / 2

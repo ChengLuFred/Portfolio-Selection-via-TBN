@@ -1,6 +1,7 @@
 import sys
 sys.path.append('/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/codes/')
-from module.backtesting import *
+#from module.backtesting import *
+from module.backtesting_old import * # backtesting_old contains the real old system
 
 import nonlinshrink as nls
 
@@ -57,7 +58,7 @@ class Shrink_50(vectorized_backtesting):
     '''
     def get_portfolio(self, year):
         covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year - 1].values,\
-                                                shrink_target=np.identity(len(self.company_subset_PERMNO_vector)),\
+                                                shrink_target=np.identity(self.covariance_aggregate.shape[1]),\
                                                 a=0.5)
         portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
         return portfolio
@@ -68,7 +69,7 @@ class Shrink_0(vectorized_backtesting):
     '''
     def get_portfolio(self, year):
         covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year - 1].values,\
-                                                shrink_target=np.identity(len(self.company_subset_PERMNO_vector)),\
+                                                shrink_target=np.identity(self.covariance_aggregate.shape[1]),\
                                                 a=0)
         portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
         return portfolio
@@ -79,7 +80,7 @@ class Shrink_100(vectorized_backtesting):
     '''
     def get_portfolio(self, year):
         covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year - 1].values,\
-                                                shrink_target=np.identity(len(self.company_subset_PERMNO_vector)),\
+                                                shrink_target=np.identity(self.covariance_aggregate.shape[1]),\
                                                 a=1)
         portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
         return portfolio

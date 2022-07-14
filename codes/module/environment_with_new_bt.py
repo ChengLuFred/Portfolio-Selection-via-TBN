@@ -1,13 +1,13 @@
 import sys
 sys.path.append('/Users/cheng/Google Drive/PhD/Research/Portfolio Selection via TBN/codes/')
-from module.backtesting_old import * # be careful which version is imported!!!
+from module.backtesting import * # be careful which version is imported!!!
 from gym.utils import seeding
 import gym
 
 class market_environment(vectorized_backtesting):
     def __init__ (self, year_range):
         super().__init__()
-        stock_num = self.stock_price.shape[1]
+        stock_num = self.stock_return.shape[1]
         self.action_space = gym.spaces.Box(low = 0.0, high = 1.0, shape=(1, ), dtype=np.float32)
         self.action_space_discrete = gym.spaces.Discrete(11)
         self.observation_space = gym.spaces.Box(low = -100, high = 100, shape=(1, stock_num + 1), dtype=np.float32)
@@ -22,8 +22,6 @@ class market_environment(vectorized_backtesting):
         self.year_range = year_range
         self.year = year_range[0]
         
-        
-    
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
@@ -96,19 +94,19 @@ class market_environment(vectorized_backtesting):
             print('The end of period\n')
             # exit()
     
-    def get_portfolio(self, year):
-        covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year - 1].values,\
-                                                shrink_target=np.identity(23),\
-                                                a=self.action)
-        portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
-        return portfolio
     # def get_portfolio(self, year):
-    #     covariance_shrunk = self.get_shrank_cov(correlation_matrix=self.correlation_aggregate.loc[year - 1].values,\
-    #                                             shrink_target=self.tbn_combined.loc[year - 1].values,\
-    #                                             volatility_vector=self.volatility_aggregate.loc[year - 1].values,
+    #     covariance_shrunk = self.get_shrank_cov(covariance_matrix=self.covariance_aggregate.loc[year - 1].values,\
+    #                                             shrink_target=np.identity(23),\
     #                                             a=self.action)
     #     portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
     #     return portfolio
+    def get_portfolio(self, year):
+        covariance_shrunk = self.get_shrank_cov(correlation_matrix=self.correlation_aggregate.loc[year - 1].values,\
+                                                shrink_target=self.tbn_combined.loc[year - 1].values,\
+                                                volatility_vector=self.volatility_aggregate.loc[year - 1].values,
+                                                a=self.action)
+        portfolio = self.get_GMVP(covariance_matrix = covariance_shrunk)
+        return portfolio
     
     def is_done(self):
         '''
