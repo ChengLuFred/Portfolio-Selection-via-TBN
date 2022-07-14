@@ -13,3 +13,4 @@ codes/log
 data/*
 documents/
 output/
+.vscode
